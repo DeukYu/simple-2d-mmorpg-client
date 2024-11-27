@@ -25,11 +25,21 @@
 *.la
 *.a
 *.lib
+!Assets/Libs/*.dll
 
 # Executables
 *.exe
 *.out
 *.app
+*.log
+*.csproj
+*.sln
 
+
+.vs/
+bin/
+obj/
+UserSettings/
+ProjectSettings/
 Library/
 Temp/
