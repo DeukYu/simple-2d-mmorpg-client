@@ -1,7 +1,6 @@
 using Assets;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 
 public struct Pos
@@ -26,80 +25,98 @@ public struct PQNode : IComparable<PQNode>
     }
 }
 
-[System.Serializable]
+[Serializable]
 public class MapData
 {
-    public int minX;
-    public int maxX;
-    public int minY;
-    public int maxY;
+    public string MapName;
+    public BoundsData Bounds;
+    public List<RowData> CollisionData;
+}
 
-    public List<int> tiles;
+[Serializable]
+public class BoundsData
+{
+    public int MinX;
+    public int MaxX;
+    public int MinY;
+    public int MaxY;
+
+    public int SizeX { get { return MaxX - MinX + 1; } }
+    public int SizeY { get { return MaxY - MinY + 1; } }
+}
+
+[Serializable]
+public class RowData
+{
+    public List<int> Columns;
+
+    public RowData(int size)
+    {
+        Columns = new List<int>(size);
+    }
 }
 
 public class MapManager
 {
     public Grid CurrentGrid { get; private set; }
-    public int MinX { get; set; }
-    public int MaxX { get; set; }
-    public int MinY { get; set; }
-    public int MaxY { get; set; }
-    public int SizeX { get { return MaxX - MinX + 1; } }
-    public int SizeY { get { return MaxY - MinY + 1; } }
+    public BoundsData Bounds { get; private set; }
 
     bool[,] _collision;
     public bool CanGo(Vector3Int cellPos)
     {
-        if (cellPos.x < MinX || cellPos.x > MaxX)
+        if (cellPos.x < Bounds.MinX || cellPos.x > Bounds.MaxX)
             return false;
-        if (cellPos.y < MinY || cellPos.y > MaxY)
+        if (cellPos.y < Bounds.MinY || cellPos.y > Bounds.MaxY)
             return false;
 
-        int x = cellPos.x - MinX;
-        int y = MaxY - cellPos.y;
+        int x = cellPos.x - Bounds.MinX;
+        int y = Bounds.MaxY - cellPos.y;
         return !_collision[y, x];
     }
-    public void LoadMap(int mapId)
+    private GameObject LoadMapPrefab(string mapName)
     {
-        DestroyMap();
-
-        string mapName = "Map_" + mapId.ToString("000");
         GameObject go = Managers.ResourceMgr.Instantiate($"Maps/{mapName}");
         if (go == null)
-        {
-            Debug.LogError($"MapManager::LoadMap() failed. mapName={mapName}");
-            return;
-        }
+            return null;
+
         go.name = "Map";
 
         var collision = Util.FindChild(go, "Tilemap_Collision", true);
         if (collision != null)
-        {
             collision.SetActive(false);
-        }
 
-        CurrentGrid = go.GetComponent<Grid>();
+        return go;
+    }
+
+    public void LoadMap(int mapId)
+    {
+        DestroyMap();
+
+        string mapName = $"Map_{mapId:000}";
+        GameObject mapObject = LoadMapPrefab(mapName);
+        if (mapObject == null)
+            throw new Exception($"Map prefab not found: {mapName}");
+
+        CurrentGrid = mapObject.GetComponent<Grid>();
 
         // Collision 관련 파일
         TextAsset mapDataFile = Resources.Load<TextAsset>($"Maps/{mapName}");
         MapData mapData = JsonUtility.FromJson<MapData>(mapDataFile.text);
 
-        MinX = mapData.minX;
-        MaxX = mapData.maxX;
-        MinY = mapData.minY; 
-        MaxY = mapData.maxY;
+        Bounds = mapData.Bounds;
 
-        var xCount = MaxX - MinX + 1;
-        var yCount = MaxY - MinY + 1;
+        var xCount = Bounds.MaxX - Bounds.MinX + 1;
+        var yCount = Bounds.MaxY - Bounds.MinY + 1;
 
         _collision = new bool[yCount, xCount];
 
         for (int y = 0; y < yCount; y++)
         {
+            var rowData = mapData.CollisionData[y];
+
             for (int x = 0; x < xCount; x++)
             {
-                int tileIndex = y * yCount + x;
-                _collision[y, x] = mapData.tiles[tileIndex] == 1 ? true : false;
+                _collision[y, x] = rowData.Columns[x] == 1 ? true : false;
             }
         }
     }
@@ -132,17 +149,17 @@ public class MapManager
         // H = 목적지에서 얼마나 가까운지 (작을 수록 좋음, 고정)
 
         // (y, x) 이미 방문했는지 여부 (방문 = closed 상태)
-        bool[,] closed = new bool[SizeY, SizeX]; // CloseList
+        bool[,] closed = new bool[Bounds.SizeY, Bounds.SizeX]; // CloseList
 
         // (y, x) 가는 길을 한 번이라도 발견했는지
         // 발견X => MaxValue
         // 발견O => F = G + H
-        int[,] open = new int[SizeY, SizeX]; // OpenList
-        for (int y = 0; y < SizeY; y++)
-            for (int x = 0; x < SizeX; x++)
+        int[,] open = new int[Bounds.SizeY, Bounds.SizeX]; // OpenList
+        for (int y = 0; y < Bounds.SizeY; y++)
+            for (int x = 0; x < Bounds.SizeX; x++)
                 open[y, x] = Int32.MaxValue;
 
-        Pos[,] parent = new Pos[SizeY, SizeX];
+        Pos[,] parent = new Pos[Bounds.SizeY, Bounds.SizeX];
 
         // 오픈리스트에 있는 정보들 중에서, 가장 좋은 후보를 빠르게 뽑아오기 위한 도구
         PriorityQueue<PQNode> pq = new PriorityQueue<PQNode>();
@@ -227,13 +244,13 @@ public class MapManager
     Pos Cell2Pos(Vector3Int cell)
     {
         // CellPos -> ArrayPos
-        return new Pos(MaxY - cell.y, cell.x - MinX);
+        return new Pos(Bounds.MaxY - cell.y, cell.x - Bounds.MinX);
     }
 
     Vector3Int Pos2Cell(Pos pos)
     {
         // ArrayPos -> CellPos
-        return new Vector3Int(pos.X + MinX, MaxY - pos.Y, 0);
+        return new Vector3Int(pos.X + Bounds.MinX, Bounds.MaxY - pos.Y, 0);
     }
 
     #endregion

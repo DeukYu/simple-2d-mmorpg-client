@@ -6,8 +6,6 @@ using System;
 using UnityEngine;
 using Assets;
 using Google.Protobuf.Common;
-using static Gpm.Ui.MultiLayout;
-using Unity.VisualScripting;
 
 namespace DummyClient
 {
@@ -173,9 +171,9 @@ namespace DummyClient
             S2C_Login loginPacket = packet as S2C_Login;
             Debug.Log("Login Success!");
             //Managers.ObjectMgr.LocalPlayer = Managers.ObjectMgr.Add(loginPacket.Player, false);
-            
+
             // TODO : Lobby UI에서 캐릭터 보여주고, 선택할 수 있도록
-            if(loginPacket.Players == null || loginPacket.Players.Count == 0)
+            if (loginPacket.Players == null || loginPacket.Players.Count == 0)
             {
                 C2S_CreatePlayer createPacket = new C2S_CreatePlayer();
                 createPacket.Name = $"Player_{UnityEngine.Random.Range(0, 10000).ToString("00000")}";
@@ -196,7 +194,7 @@ namespace DummyClient
         {
             S2C_CreatePlayer createPlayerPacket = packet as S2C_CreatePlayer;
 
-            if(createPlayerPacket.Player == null)
+            if (createPlayerPacket.Player == null)
             {
                 C2S_CreatePlayer req = new C2S_CreatePlayer();
                 req.Name = $"Player_{UnityEngine.Random.Range(0, 10000).ToString("00000")}";
