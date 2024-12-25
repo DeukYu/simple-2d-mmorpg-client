@@ -5,11 +5,10 @@ using System.Reflection;
 using System;
 using UnityEngine;
 using Assets;
-using Google.Protobuf.Common;
 
 namespace DummyClient
 {
-    class PacketHandler
+    partial class PacketHandler
     {
         public static Action<PacketSession, IMessage> GetHandler(Type packetType)
         {
@@ -27,6 +26,66 @@ namespace DummyClient
             // 메서드 정보를 Action<PacketSession, IMessage> 델리게이트로 변환
             return (Action<PacketSession, IMessage>)Delegate.CreateDelegate(
                 typeof(Action<PacketSession, IMessage>), methodInfo);
+        }
+
+        public static void S2C_ItemListHandler(PacketSession session, IMessage packet)
+        {
+            S2C_ItemList itemListPacket = packet as S2C_ItemList;
+
+            Managers.InventoryMgr.Clear();
+
+            // 메모리 아이템 정보 적용
+            foreach (var itemInfo in itemListPacket.Items)
+            {
+                if (Item.MakeItem(itemInfo, out var item))
+                    Managers.InventoryMgr.Add(item);
+            }
+            if (Managers.ObjectMgr.LocalPlayer != null)
+                Managers.ObjectMgr.LocalPlayer.RefreshAdditionalStat();
+        }
+
+        public static void S2C_AddItemHandler(PacketSession session, IMessage packet)
+        {
+            S2C_AddItem addItemPacket = (S2C_AddItem)packet;
+
+            foreach (var itemInfo in addItemPacket.Items)
+            {
+                if (Item.MakeItem(itemInfo, out var item))
+                    Managers.InventoryMgr.Add(item);
+            }
+
+            Debug.Log("아이템 획득하였습니다.");
+
+            var gameSceneUI = Managers.UIMgr.SceneUI as UI_GameScene;
+            var invenUI = gameSceneUI.InvenUI;
+            var statUI = gameSceneUI.StatUI;
+            invenUI.RefreshUI();
+            statUI.RefreshUI();
+
+            if (Managers.ObjectMgr.LocalPlayer != null)
+                Managers.ObjectMgr.LocalPlayer.RefreshAdditionalStat();
+        }
+
+        public static void S2C_EquipItemHandler(PacketSession session, IMessage packet)
+        {
+            S2C_EquipItem equipItemPacket = (S2C_EquipItem)packet;
+
+            if(Managers.InventoryMgr.TryGet(equipItemPacket.ItemUid, out Item item) == false)
+            {
+                Debug.LogError("Failed to find item");
+                return;
+            }
+
+            item.Equipped = equipItemPacket.Equipped;
+
+            var gameSceneUI = Managers.UIMgr.SceneUI as UI_GameScene;
+            var invenUI = gameSceneUI.InvenUI;
+            var statUI = gameSceneUI.StatUI;
+            invenUI.RefreshUI();
+            statUI.RefreshUI();
+
+            if (Managers.ObjectMgr.LocalPlayer != null)
+                Managers.ObjectMgr.LocalPlayer.RefreshAdditionalStat();
         }
 
         public static void S2C_EnterGameHandler(PacketSession session, IMessage packet)
@@ -156,56 +215,9 @@ namespace DummyClient
             // TODO : 여기서 채팅 메시지를 받아서 UI에 표시
         }
 
-        public static void S2C_ConnectedHandler(PacketSession session, IMessage packet)
+        public static void S2C_ChangeStatHandler(PacketSession session, IMessage packet)
         {
-            Debug.Log("Connected!");
-
-            C2S_Login loginPacket = new C2S_Login();
-            loginPacket.UniqueId = SystemInfo.deviceUniqueIdentifier;
-            Managers.NetworkMgr.Send(loginPacket);
-        }
-
-        // 로그인 + 캐릭터 목록
-        public static void S2C_LoginHandler(PacketSession session, IMessage packet)
-        {
-            S2C_Login loginPacket = packet as S2C_Login;
-            Debug.Log("Login Success!");
-            //Managers.ObjectMgr.LocalPlayer = Managers.ObjectMgr.Add(loginPacket.Player, false);
-
-            // TODO : Lobby UI에서 캐릭터 보여주고, 선택할 수 있도록
-            if (loginPacket.Players == null || loginPacket.Players.Count == 0)
-            {
-                C2S_CreatePlayer createPacket = new C2S_CreatePlayer();
-                createPacket.Name = $"Player_{UnityEngine.Random.Range(0, 10000).ToString("00000")}";
-                Managers.NetworkMgr.Send(createPacket);
-            }
-            else
-            {
-                // 무조건 첫번째 로그인
-                LobbyPlayerInfo info = loginPacket.Players[0];
-                C2S_EnterGame enterGamePacket = new C2S_EnterGame();
-                enterGamePacket.Name = info.Name;
-                Managers.NetworkMgr.Send(enterGamePacket);
-
-            }
-        }
-
-        public static void S2C_CreatePlayerHandler(PacketSession session, IMessage packet)
-        {
-            S2C_CreatePlayer createPlayerPacket = packet as S2C_CreatePlayer;
-
-            if (createPlayerPacket.Player == null)
-            {
-                C2S_CreatePlayer req = new C2S_CreatePlayer();
-                req.Name = $"Player_{UnityEngine.Random.Range(0, 10000).ToString("00000")}";
-                Managers.NetworkMgr.Send(req);
-            }
-            else
-            {
-                C2S_EnterGame enterGamePacket = new C2S_EnterGame();
-                enterGamePacket.Name = createPlayerPacket.Player.Name;
-                Managers.NetworkMgr.Send(enterGamePacket);
-            }
+            S2C_ChangeStat changeStatPacket = (S2C_ChangeStat)packet;
         }
     }
 }

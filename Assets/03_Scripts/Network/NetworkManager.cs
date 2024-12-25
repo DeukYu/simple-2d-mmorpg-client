@@ -8,16 +8,18 @@ using System.Net;
 public class NetworkManager
 {
     ServerSession _session = new ServerSession();
+    public long AccountId { get; set; }
+    public string Token { get; set; }
     public void Send(IMessage packet)
     {
         _session.Send(packet);
     }
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    public void Init()
+    public void ConnectToGame(string ipAddress, int port)
     {
         // DNS (Domain Name System)
-        IPAddress ipAddr = DnsUtil.GetLocalIpAddress();
-        IPEndPoint endPoint = new IPEndPoint(ipAddr, 7777);
+        IPAddress ipAddr = IPAddress.Parse(ipAddress);
+        IPEndPoint endPoint = new IPEndPoint(ipAddr, port);
 
         Connector connector = new Connector();
 

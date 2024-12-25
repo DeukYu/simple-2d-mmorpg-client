@@ -19,7 +19,7 @@ class PacketManager
 
     PacketManager()
     {
-        RegisterTest();
+        Register();
     }
 
     Dictionary<ushort, Action<PacketSession, ArraySegment<byte>, ushort>> _onRecv = new Dictionary<ushort, Action<PacketSession, ArraySegment<byte>, ushort>>();
@@ -28,7 +28,7 @@ class PacketManager
 
     public Action<PacketSession, IMessage, ushort> CustomHandler { get; set; }
 
-    public void RegisterTest()
+    public void Register()
     {
         // 현재 어셈블리에서 IMessage를 구현한 비추상 타입 가져오기
         var packetTypes = Assembly.GetExecutingAssembly().GetTypes()

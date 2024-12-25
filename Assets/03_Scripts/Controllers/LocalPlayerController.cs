@@ -2,6 +2,7 @@ using Assets;
 using Google.Protobuf.Common;
 using Google.Protobuf.Enum;
 using Google.Protobuf.Protocol;
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -10,13 +11,18 @@ public class LocalPlayerController : PlayerController
     bool _moveKeyPressed = false;
     Coroutine _coSkillCooltime;
 
+    public int WeaponDamage { get; private set; } = 0;
+    public int ArmorDefense { get; private set; } = 0;
     protected override void Init()
     {
         base.Init();
+        RefreshAdditionalStat();
     }
 
     protected override void UpdateController()
     {
+        GetUIKeyInput();
+
         switch (State)
         {
             case CreatureState.Idle:
@@ -81,6 +87,40 @@ public class LocalPlayerController : PlayerController
     void LateUpdate()
     {
         Camera.main.transform.position = new Vector3(transform.position.x, transform.position.y, -10);
+    }
+
+    void GetUIKeyInput()
+    {
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            var gameSceneUI = Managers.UIMgr.SceneUI as UI_GameScene;
+            var invenUI = gameSceneUI.InvenUI;
+
+            if (invenUI.gameObject.activeSelf)
+            {
+                invenUI.gameObject.SetActive(false);
+            }
+            else
+            {
+                invenUI.gameObject.SetActive(true);
+                invenUI.RefreshUI();
+            }
+        }
+        else if(Input.GetKeyDown(KeyCode.C))
+        {
+            var gameSceneUI = Managers.UIMgr.SceneUI as UI_GameScene;
+            var statUI = gameSceneUI.StatUI;
+
+            if (statUI.gameObject.activeSelf)
+            {
+                statUI.gameObject.SetActive(false);
+            }
+            else
+            {
+                statUI.gameObject.SetActive(true);
+                statUI.RefreshUI();
+            }
+        }
     }
 
     void GetDirInput()
@@ -160,6 +200,27 @@ public class LocalPlayerController : PlayerController
             };
             Managers.NetworkMgr.Send(movePacket);
             _updated = false;
+        }
+    }
+    public void RefreshAdditionalStat()
+    {
+        WeaponDamage = 0;
+        ArmorDefense = 0;
+
+        foreach (var item in Managers.InventoryMgr.Items.Values)
+        {
+            if (item.Equipped == false)
+                continue;
+
+            switch (item.ItemType)
+            {
+                case ItemType.Weapon:
+                    WeaponDamage += ((Weapon)item).Damage;
+                    break;
+                case ItemType.Armor:
+                    ArmorDefense += ((Armor)item).Defense;
+                    break;
+            }
         }
     }
 }

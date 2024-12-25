@@ -20,9 +20,8 @@ public class BaseController : MonoBehaviour
         {
             if (_statInfo.Equals(value))
                 return;
-            _statInfo.Hp = value.Hp;
-            _statInfo.MaxHp = value.MaxHp;
-            _statInfo.Speed = value.Speed;
+
+            _statInfo.MergeFrom(value);
         }
     }
 

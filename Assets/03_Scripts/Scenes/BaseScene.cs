@@ -12,11 +12,11 @@ public abstract class BaseScene : MonoBehaviour
 
     protected virtual void Init()
     {
-        //Object obj = GameObject.FindFirstObjectByType(typeof(EventSystem));
-        //if (obj == null)
-        //{
-        //    Managers.ResourceMgr.Instantiate("UI/EventSystem").name = "@EventSystem";
-        //}
+        var obj = GameObject.FindFirstObjectByType(typeof(EventSystem));
+        if (obj == null)
+        {
+            Managers.ResourceMgr.Instantiate("UI/EventSystem").name = "@EventSystem";
+        }
     }
 
     public abstract void Clear();

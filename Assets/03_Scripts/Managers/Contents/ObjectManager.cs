@@ -18,6 +18,14 @@ public class ObjectManager
 
     public bool Add(ObjectInfo objectInfo, bool isLocalPlayer = false)
     {
+        if (LocalPlayer != null || LocalPlayer.Id == objectInfo.ObjectId)
+            return true;
+
+        if(_objects.ContainsKey(objectInfo.ObjectId))
+        {
+            return true;
+        }
+
         var ojbectType = GetObjectTypeById(objectInfo.ObjectId);
 
         GameObject go = null;
@@ -59,7 +67,7 @@ public class ObjectManager
         LocalPlayer = go.GetComponent<LocalPlayerController>();
         LocalPlayer.Id = objectInfo.ObjectId;
         LocalPlayer.PositionInfo = objectInfo.PosInfo;
-        LocalPlayer.StatInfo = objectInfo.StatInfo;
+        LocalPlayer.StatInfo.MergeFrom(objectInfo.StatInfo);
         LocalPlayer.SyncPos();
 
         return go;
@@ -77,7 +85,7 @@ public class ObjectManager
         var pc = go.GetComponent<PlayerController>();
         pc.Id = objectInfo.ObjectId;
         pc.PositionInfo = objectInfo.PosInfo;
-        pc.StatInfo = objectInfo.StatInfo;
+        pc.StatInfo.MergeFrom(objectInfo.StatInfo);
         pc.SyncPos();
 
         return go;
@@ -95,7 +103,7 @@ public class ObjectManager
         var mc = go.GetComponent<MonsterController>();
         mc.Id = objectInfo.ObjectId;
         mc.PositionInfo = objectInfo.PosInfo;
-        mc.StatInfo = objectInfo.StatInfo;
+        mc.StatInfo.MergeFrom(objectInfo.StatInfo);
         mc.SyncPos();
 
         return go;
@@ -112,7 +120,7 @@ public class ObjectManager
 
         ArrowController ac = go.GetComponent<ArrowController>();
         ac.PositionInfo = objectInfo.PosInfo;
-        ac.StatInfo = objectInfo.StatInfo;
+        ac.StatInfo.MergeFrom(objectInfo.StatInfo);
         ac.SyncPos();
 
         return go;
@@ -120,6 +128,12 @@ public class ObjectManager
 
     public void Remove(long playerId)
     {
+        if (LocalPlayer != null || LocalPlayer.Id == playerId)
+            return;
+
+        if (_objects.ContainsKey(playerId) == false)
+            return;
+
         var go = FindById(playerId);
         if (go == null)
             return;
